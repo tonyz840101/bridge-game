@@ -63,7 +63,7 @@
 	var player_sit = [];
 	var goals = [];
 	var teams = [];
-	var player_sit_index = -1;
+	var player_sit_index = -2;
 	var on_table = [-1, -1, -1, -1];
 	var current_call = -1;
 	var calling = false;
@@ -85,7 +85,7 @@
 		player_names = [];
 		goals = [];
 		teams = [];
-		player_sit_index = -1;
+		player_sit_index = -2;
 		on_table = [-1, -1, -1, -1];
 		current_call = -1;
 		calling = false;
@@ -116,7 +116,7 @@
 
 	function showtable(data) {
 		var h = 120, w = 80, x = 0, y = 0, suits = ['clubs', 'diamonds','hearts', 'spades'], points = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k','a'];
-		if(player_sit_index != -1){
+		if(player_sit_index > -1){
 			var i = data[(player_sit_index + 1) % 4];
 			if(i != -1) ctx.drawPokerCard(200, 240, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
 			i = data[(player_sit_index + 2) % 4];
@@ -260,10 +260,10 @@
 			moving = data.moving;
 			if(data.state != 3) document.getElementById("EXIT").style.visibility="hidden";
 			else document.getElementById("EXIT").style.visibility="visible";
-			if(data.state != 1 ||　moving != player_id) document.getElementById("bidding").style.visibility="hidden";
+			if(data.state != 1 || moving != player_sit_index) document.getElementById("bidding").style.visibility="hidden";
 			if(data.state == 1){
 				current_call = data.current_call - 1;
-				if(moving == player_id) Ready_to_call();
+				if(moving == player_sit_index) Ready_to_call();
 			}
 			else if(data.state == 2) CallOver = true;
 		}
@@ -352,7 +352,7 @@
 				ctx.fillText(pr.str, 230, 300);
 			}
 		}
-		if(player_sit_index != -1){
+		if(player_sit_index > -1){
 			ctx.font = "36px Arial";
 			ctx.fillStyle = "#000000";
 			ctx.fillText(player_names[player_sit_index], 10, 450);
@@ -360,10 +360,10 @@
 			ctx.fillText(player_names[(player_sit_index + 2) % 4], 150, 50);
 			ctx.fillText(player_names[(player_sit_index + 3) % 4], 450, 170);
 		}
-		var seat = -1;
-		for(i = 0; i < player_sit.length; i ++){
+		var seat = (moving - player_sit_index + 4) % 4;
+		/*for(i = 0; i < player_sit.length; i ++){
 			if(player_sit[(player_sit_index + i) % 4] == moving) seat = i;
-		}
+		}*/
 		if(seat != -1 && state > 0 && state < 3){
 			ctx.beginPath();
 			switch(seat){
@@ -413,7 +413,7 @@
 	};
 	
 	canvas.addEventListener('click', function(e) {
-		if(moving != player_id || state != 2) return;
+		if(moving != player_sit_index || state != 2) return;
 		var pos = getMousePos(canvas, e);
 		var x = 80, y = 480, w = 35, h = 120;
 		var val = -1;

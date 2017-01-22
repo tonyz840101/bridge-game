@@ -14,7 +14,6 @@ var name_pool = ['Aaron', 'Alexander', 'Bard', 'Billy', 'Carl', 'Colin', 'Daniel
 	'Neil', 'Norton', 'Oscar', 'Owen', 'Parker', 'Pete', 'Quentin', 'Quinn', 'Richard', 'Robin', 'Scott', 'Stanley', 'Thomas',
 	'Troy', 'Ulysses', 'Uriah', 'Vladimir', 'Victor', 'Wade', 'Will', 'Xavier', 'Yale', 'York', 'Zachary', 'Zebulon', 'heisenberg']
 
-
 var pass_count = 0; 
 var state = 0;
 var player_sit = [];
@@ -27,6 +26,7 @@ var bid = [];
 var teams = new Array(2);
 var goals = new Array(2);
 var on_table = [-1, -1, -1, -1];
+var bot_wait = 2500;
 
 function findPlayer(id){
 	for(ctr_2 = 0; ctr_2<player.length; ctr_2++)
@@ -189,7 +189,7 @@ function brocasting(roomID) {
 			'teams': room[rid].teams,
 			'goals': room[rid].goals,
 			'on_table': room[rid].on_table,
-			'moving': room[rid].player_sit[room[rid].target],
+			'moving': room[rid].target,
 			'current_call': room[rid].bid[1],
 			'player_names': room[rid].player_names,
 		});
@@ -330,6 +330,7 @@ function game_judge(data, rid, roomID, player_sit_index){
 			return -1;
 			break;
 	}
+	console.log(roomID);
 	brocasting(roomID);
 }
 
@@ -347,7 +348,7 @@ function BOT_check_greater(rid, player_sit_index, card){
 
 function Bot_play(rid, roomID, player_sit_index){
 	var val;
-	//console.log('bot' + player_sit_index);	
+	console.log('bot' + player_sit_index);	
 	//console.log(room[rid].player_cards[player_sit_index]);
 	switch(room[rid].state){
 		case 1:
@@ -411,6 +412,7 @@ function Bot_play(rid, roomID, player_sit_index){
 					console.log('in case 3:');
 					var winner = 0, win_scroce = 0, scroce = 0, target = player_sit_index, winner_index = 0;
 					var king_color = (room[rid].bid[1] - 1) % 5 + 1;
+					var throw_useless = false;
 					for(var i = 0; i < 3; i ++){//checking who is winning
 						scroce = 0; 
 						target ++;
@@ -431,28 +433,8 @@ function Bot_play(rid, roomID, player_sit_index){
 							console.log('	smallest of target color');
 						}
 						else {//bot don't have this color
-							var largest = 0, index = -1;
-							var choice = [];
-							for(var i = 0; i < 4; i ++){//list all choice
-								if(i == king_color - 1) i ++;
-								if(i == 4) break;
-								choice[choice.length] = i;
-							}
-							var smallest = 13, index = -1;
-							for(var i = 0; i < choice.length; i ++){
-								if(card_class[choice[i]][0] % 13 < smallest){
-									smallest = card_class[choice[i]][0] % 13;
-									index = i;
-								}
-								else if(card_class[choice[i]][0] % 13 == smallest){
-									if(card_class[choice[i]].length > card_class[index].length){
-										smallest = card_class[choice[i]][0] % 13;
-										index = i;
-									}
-								}
-							}
-							val = card_class[choice[index]][0];
 							console.log('	smallest among the rest');
+							throw_useless = true;
 						}
 					}
 					else{//try to win this round
@@ -492,27 +474,7 @@ function Bot_play(rid, roomID, player_sit_index){
 							console.log('	try to win with king color');
 							if(room[rid].target_color == king_color){
 								console.log('	failed: bot don\'t have king(target) color');
-								var largest = 0, index = -1;
-								var choice = [];
-								for(var i = 0; i < 4; i ++){//list all choice
-									if(i == king_color - 1) i ++;
-									if(i == 4) break;
-									choice[choice.length] = i;
-								}
-								var smallest = 13, index = -1;
-								for(var i = 0; i < choice.length; i ++){
-									if(card_class[choice[i]][0] % 13 < smallest){
-										smallest = card_class[choice[i]][0] % 13;
-										index = i;
-									}
-									else if(card_class[choice[i]][0] % 13 == smallest){
-										if(card_class[choice[i]].length > card_class[index].length){
-											smallest = card_class[choice[i]][0] % 13;
-											index = i;
-										}
-									}
-								}
-								val = card_class[choice[index]][0];
+								throw_useless = true;
 							}
 							else if(winner_card_color == king_color){//enemy win with king color
 								console.log('	enemy is winning with king color');
@@ -528,71 +490,49 @@ function Bot_play(rid, roomID, player_sit_index){
 										}
 									else{//failed to win with king color
 										console.log('	failed: bot\'s cards of king color is not big enough');
-										var largest = 0, index = -1;
-										var choice = [];
-										for(var i = 0; i < 4; i ++){//list all choice
-											if(i == king_color - 1) i ++;
-											if(i == 4) break;
-											choice[choice.length] = i;
-										}
-										var smallest = 13, index = -1;
-										for(var i = 0; i < choice.length; i ++){
-											if(card_class[choice[i]][0] % 13 < smallest){
-												smallest = card_class[choice[i]][0] % 13;
-												index = i;
-											}
-											else if(card_class[choice[i]][0] % 13 == smallest){
-												if(card_class[choice[i]].length > card_class[index].length){
-													smallest = card_class[choice[i]][0] % 13;
-													index = i;
-												}
-											}
-										}
-										val = card_class[choice[index]][0];
+										throw_useless = true;
 									}
 								}
 								else{
 									console.log('	failed: bot don\'t have king color');
-									var largest = 0, index = -1;
-									var choice = [];
-									for(var i = 0; i < 4; i ++){//list all choice
-										if(i == king_color - 1) i ++;
-										if(i == 4) break;
-										choice[choice.length] = i;
-									}
-									var smallest = 13, index = -1;
-									for(var i = 0; i < choice.length; i ++){
-										if(card_class[choice[i]][0] % 13 < smallest){
-											smallest = card_class[choice[i]][0] % 13;
-											index = i;
-										}
-										else if(card_class[choice[i]][0] % 13 == smallest){
-											if(card_class[choice[i]].length > card_class[index].length){
-												smallest = card_class[choice[i]][0] % 13;
-												index = i;
-											}
-										}
-									}
-									val = card_class[choice[index]][0];
+									throw_useless = true;
 								}
 							}
 							else{//enemy win with target color
 								console.log('	enemy is winning with target color');
-								/*if(card_class[room[rid].target_color - 1][card_class[room[rid].target_color - 1].length - 1] > winner_card){
-									console.log('	try to win with king color');
-									for(var i = 0; i < card_class[room[rid].target_color - 1].length; i ++){
-										if(card_class[room[rid].target_color - 1][i] > winner_card){
-											val = card_class[room[rid].target_color - 1][i];
-											break;
-										}
-									}
+								if(card_class[king_color - 1].length){
+									val = card_class[king_color - 1][0];
 								}
 								else{
-									console.log('	failed: bot\'s cards of target color is not big enough');
-									val = card_class[room[rid].target_color - 1][0];//pick the smallest
-								}*/
+									console.log('	failed: bot don\'t have king color');
+									throw_useless = true;
+								}
 							}
 						}
+					}
+					
+					if(throw_useless){
+						var largest = 0, index = -1;
+						var choice = [];
+						for(var i = 0; i < 4; i ++){//list all choice
+							if(i == king_color - 1) i ++;
+							if(i == 4) break;
+							choice[choice.length] = i;
+						}
+						var smallest = 13, index = -1;
+						for(var i = 0; i < choice.length; i ++){
+							if(card_class[choice[i]][0] % 13 < smallest){
+								smallest = card_class[choice[i]][0] % 13;
+								index = i;
+							}
+							else if(card_class[choice[i]][0] % 13 == smallest){
+								if(card_class[choice[i]].length > card_class[index].length){
+									smallest = card_class[choice[i]][0] % 13;
+									index = i;
+								}
+							}
+						}
+						val = card_class[choice[index]][0];
 					}
 					break;
 				default:
@@ -643,6 +583,14 @@ serv_io.sockets.on('connection', function(socket) {
 		player_sit_index = -1;
 	});
 	
+	function timeoutBot(){
+		if(roomID == -1) return;
+		var rid = findRoom(roomID);
+		console.log(rid);
+		Bot_play(rid, roomID, room[rid].target);
+		if(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(){ timeoutBot(); }, bot_wait);
+	}
+	
 	socket.on('FindGame',function(){
 		if(roomID != -1) return;
 		console.log("Finding for " + socket.username + ' ' + socket['id']);
@@ -685,9 +633,6 @@ serv_io.sockets.on('connection', function(socket) {
 			room[rid].target = Math.floor((Math.random() * 4));
 			for(var i = 0; i < 4; i ++){
 				if(room[rid].player_sit[i] != 'BOT'){
-					console.log(room[rid].player_sit[i]);
-					console.log(findPlayer2(room[rid].player_sit[i]));
-					console.log(player[findPlayer2(room[rid].player_sit[i])].p_name);
 					room[rid].player_names[i] = player[findPlayer2(room[rid].player_sit[i])].p_name;
 				}
 				else {
@@ -696,7 +641,9 @@ serv_io.sockets.on('connection', function(socket) {
 			}
 			console.log(room[rid].player_names);
 			brocasting(roomID);
-			while(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(Bot_play(rid, roomID, room[rid].target), 5000);
+			
+			if(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(){ timeoutBot(); }, bot_wait);
+			//while(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(rid, roomID){ Bot_play(rid, roomID, room[rid].target); }, 3000);
 			//while(room[rid].player_sit[room[rid].target] == 'BOT') Bot_play(rid, roomID, room[rid].target);
 			//if(room[rid].player_sit[room[rid].target - 1] == room[rid].player_id) socket.emit('call', {'current_call': 0});
 		}
@@ -729,9 +676,6 @@ serv_io.sockets.on('connection', function(socket) {
 			room[rid].target = Math.floor((Math.random() * 4));
 			for(var i = 0; i < 4; i ++){
 				if(room[rid].player_sit[i] != 'BOT'){
-					console.log(room[rid].player_sit[i]);
-					console.log(findPlayer2(room[rid].player_sit[i]));
-					console.log(player[findPlayer2(room[rid].player_sit[i])].p_name);
 					room[rid].player_names[i] = player[findPlayer2(room[rid].player_sit[i])].p_name;
 				}
 				else {
@@ -740,7 +684,9 @@ serv_io.sockets.on('connection', function(socket) {
 			}
 			console.log(room[rid].player_names);
 			brocasting(roomID);
-			while(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(Bot_play(rid, roomID, room[rid].target), 5000);
+			
+			if(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(){ timeoutBot(); }, bot_wait);
+			//while(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(rid, roomID){ Bot_play(rid, roomID, room[rid].target); }, 3000);
 		}
 	});
 	
@@ -757,7 +703,8 @@ serv_io.sockets.on('connection', function(socket) {
 			player_sit_index = room[rid].player_sit.indexOf(player_id);
 		game_judge(data, rid, roomID, player_sit_index);
 		//while(room[rid].player_sit[room[rid].target] == 'BOT') Bot_play(rid, roomID, room[rid].target);
-		while(room[rid].player_sit[room[rid].target] == 'BOT' && room[rid].state < 3) setTimeout(Bot_play(rid, roomID, room[rid].target), 5000);
+		if(room[rid].player_sit[room[rid].target] == 'BOT' && room[rid].state < 3) setTimeout(function(){ timeoutBot(); }, bot_wait);
+		//while(room[rid].player_sit[room[rid].target] == 'BOT' && room[rid].state < 3) setTimeout(function(rid, roomID){ Bot_play(rid, roomID, room[rid].target); }, 3000);
 	});
 	
 	//left
@@ -766,7 +713,7 @@ serv_io.sockets.on('connection', function(socket) {
 		if(tmp != -1)
 			player.splice(tmp,1);
 		if(roomID != -1){
-			var rid = findRoom(roomID);//room[rid].
+			var rid = findRoom(room[rid]);//room[rid].
 			leaveRoom(socket, rid, player_id);
 		}
 		
