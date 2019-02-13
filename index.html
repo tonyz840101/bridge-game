@@ -1,7 +1,9 @@
 <html>
 <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<script src="/socket.io/socket.io.js"></script>
-	<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+	<script src="jquery-1.11.0.min.js"></script>
+	<!--script src="http://code.jquery.com/jquery-1.11.0.min.js"></script-->
 	<script src="poker.min.js"></script>
 	<style>
 		canvas {
@@ -73,7 +75,7 @@
 	var state = 0;
 	var moving = -1;
 	var param = {};
-	var result = 0;
+	var result = -1;
 	var player_names = [];
 
 
@@ -92,7 +94,7 @@
 		CallOver = false;
 		state = 0;
 		moving = -1;
-		result = 0;
+		result = -1;
 		document.getElementById("bidding").style.visibility="hidden";
 		document.getElementById("EXIT").style.visibility="hidden";
 		document.getElementById("BotAdd").style.visibility="hidden";
@@ -216,8 +218,8 @@
 	
 	socket.on('over', function(data) {
 		document.getElementById("EXIT").style.visibility="visible";
-		if(player_sit_index % 2 == data.winner) result = 1;//display_message = "Your team Win:)";
-		else result = 2;//display_message = "Your team Lose:(";
+		result = data.winner;//display_message = "Your team Win:)";
+		//display_message = "Your team Lose:(";
 		//alert(display_message);
 	});
 
@@ -288,22 +290,17 @@
 	setInterval(function() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		if(state == 1 || state == 2) showpoker(player_cards);
-		if(state == 2)showtable(on_table);
-		if(result){
-			var display_message;
-			switch(result){
-				case 1:
-					display_message = "Your team Win:)";
-					ctx.fillStyle = "#0000ff";
-					ctx.font = "40px Arial";
-					ctx.fillText("Your team Win:)", 170, 130);
-					break;
-				case 2:
-					display_message = "Your team Lose:(";
-					ctx.fillStyle = "#ff0000";
-					ctx.font = "40px Arial";
-					ctx.fillText("Your team Lose:(", 150, 130);
-					break;
+		if(state >= 2)showtable(on_table);
+		if(result != -1){
+			if(result == player_sit_index % 2){
+				ctx.fillStyle = "#0000ff";
+				ctx.font = "40px Arial";
+				ctx.fillText("Your team Win:)", 170, 130);
+			}
+			else{
+				ctx.fillStyle = "#ff0000";
+				ctx.font = "40px Arial";
+				ctx.fillText("Your team Lose:(", 150, 130);
 			}
 		}
 		//alert(display_message);
@@ -334,16 +331,16 @@
 				
 				if(player_sit_index % 2){
 					ctx.fillStyle = "#0000ff";
-					ctx.fillText('Your team: '+teams[0]+'/'+goals[0], 450, 20);
+					ctx.fillText('Your team: '+teams[player_sit_index % 2]+'/'+goals[player_sit_index % 2], 450, 20);
 					ctx.fillStyle = "#ff0000";
-					ctx.fillText('Enemy team: '+teams[1]+'/'+goals[1], 450, 38);
+					ctx.fillText('Enemy team: '+teams[(player_sit_index + 1) % 2]+'/'+goals[(player_sit_index + 1) % 2], 450, 38);
 				}
-				else {
+				/*else {
 					ctx.fillStyle = "#0000ff";
 					ctx.fillText('Your team: '+teams[1]+'/'+goals[1], 450, 20);
 					ctx.fillStyle = "#ff0000";
 					ctx.fillText('Enemy team: '+teams[0]+'/'+goals[0], 450, 38);
-				}
+				}*/
 			}
 			else {
 				ctx.font = "72px Arial";

@@ -13,7 +13,7 @@ var name_pool = ['Aaron', 'Alexander', 'Bard', 'Billy', 'Carl', 'Colin', 'Daniel
 	'Geoffrey', 'Harry', 'Harvey', 'Isaac', 'Ivan', 'Jacob', 'John', 'Kevin', 'Kyle', 'Lance', 'Louis', 'Martin', 'Michael',
 	'Neil', 'Norton', 'Oscar', 'Owen', 'Parker', 'Pete', 'Quentin', 'Quinn', 'Richard', 'Robin', 'Scott', 'Stanley', 'Thomas',
 	'Troy', 'Ulysses', 'Uriah', 'Vladimir', 'Victor', 'Wade', 'Will', 'Xavier', 'Yale', 'York', 'Zachary', 'Zebulon', 'heisenberg']
-
+var BOT_talking = true;
 var pass_count = 0; 
 var state = 0;
 var player_sit = [];
@@ -82,6 +82,19 @@ var server = http.createServer(function(request, response) {
 				response.end();
 			});
 			break
+		case '/jquery-1.11.0.min.js':
+			fs.readFile(__dirname + path, function(error, data) {
+				if (error){
+					response.writeHead(404);
+					response.write("opps this doesn't exist - 404");
+				}
+				else {
+					response.writeHead(200, {"Content-Type": "text/html"});
+					response.write(data, "utf8");
+				}
+				response.end();
+			});
+			break
 		default:
 			response.writeHead(404);
 			response.write("opps this doesn't exist - 404");
@@ -121,7 +134,9 @@ function Newroom(){
 		'player_less_color': [[false, false, false, false], [false, false, false, false], [false, false, false, false], [false, false, false, false]],
 		'color_left': [13, 13, 13, 13],
 		'dismiss': 0,
-		'bidList':[[], [], [], []]
+		'bidList':[[], [], [], []],
+		'feed_last_king': [-1, -1, -1, -1],
+		'king_tracer': false
 	};
 	for(var i = 0; i < 4; i ++) room_obj.player_cards[i]= new Array(13);
 	var new_rid = room.length;
@@ -216,6 +231,16 @@ function printCard(card){
 	}
 	return str;
 }
+
+function printColor(color){
+	switch(color){
+		case 0: return "♣ ";	break;
+		case 1: return "♦ ";	break;
+		case 2: return "♥ ";	break;
+		case 3: return "♠ ";	break;
+	}
+	return false;
+}
 	
 function game_judge(data, rid, roomID, player_sit_index){
 	if(data.player_id != room[rid].player_sit[room[rid].target]) return -1;
@@ -240,7 +265,7 @@ function game_judge(data, rid, roomID, player_sit_index){
 			else {
 				room[rid].bid[0] = room[rid].target;
 				room[rid].bid[1] = parseInt(data.user_data);
-				room[rid].bidList[room[rid].target][room[rid].bidList[room[rid].target].length] = (room[rid].bid[1] - 1) % 5;
+				if(((room[rid].bid[1] - 1) % 5 != 4) && (!room[rid].bidList[room[rid].target].length || room[rid].bidList[room[rid].target].indexOf((room[rid].bid[1] - 1) % 5) == -1)) room[rid].bidList[room[rid].target][room[rid].bidList[room[rid].target].length] = (room[rid].bid[1] - 1) % 5;
 				room[rid].pass_count = 0;
 				room[rid].target ++;
 				if(room[rid].target == 4) room[rid].target = 0;
@@ -254,8 +279,10 @@ function game_judge(data, rid, roomID, player_sit_index){
 			if(index != -1){
 				if(room[rid].target_count == 0 || card_color == room[rid].target_color){
 					if(room[rid].target_count == 0){
+						if(room[rid].player_sit[room[rid].target] != 'BOT') room[rid].king_tracer = false;
 						room[rid].on_table = [-1, -1, -1, -1];
-						room[rid].target_color = card_color ;
+						room[rid].target_color = card_color;
+						console.log(room[rid].player_less_color);
 						//display_message = "Player " + data.player_id + " throw out " + card;
 					}
 					//else 
@@ -281,7 +308,15 @@ function game_judge(data, rid, roomID, player_sit_index){
 						}
 					}
 					if(error) return -1;
-					if(!room[rid].player_less_color[player_sit_index][card_color - 1])room[rid].player_less_color[player_sit_index][card_color - 1] = true;
+					if(!room[rid].player_less_color[player_sit_index][card_color - 1]) room[rid].player_less_color[player_sit_index][card_color - 1] = true;
+					if(room[rid].king_tracer && room[rid].target_count == 3 && card_color == king_color){
+						room[rid].feed_last_king[player_sit_index] = (card - 1) % 13 + 1;
+						console.log('king traced: ' + printCard(card));
+					}
+					else if(card_color == king_color && room[rid].target_color != king_color){
+						room[rid].feed_last_king[player_sit_index] = (card - 1) % 13 + 1;
+						console.log('king recorded: ' + printCard(card));
+					}
 					//display_message += "\nPlayer " + data.player_id + " throw out " + card;
 					room[rid].table_card[room[rid].target_count ++] = card;
 					room[rid].color_left[card_color - 1] --;
@@ -310,11 +345,11 @@ function game_judge(data, rid, roomID, player_sit_index){
 							win_scroce = scroce;
 						}
 					}
-					room[rid].teams[room[rid].target % 2] ++;
+					room[rid].teams[player_sit_index % 2] ++;
 					if(room[rid].teams[room[rid].target % 2] == room[rid].goals[room[rid].target % 2]){
 						brocasting(roomID);
-						if(room[rid].player_sit.indexOf(winner) % 2 == 0) serv_io.to(roomID).emit('over', {'winner': 0});
-						else serv_io.to(roomID).emit('over', {'winner': 1});
+						if(room[rid].player_sit.indexOf(winner) % 2) serv_io.to(roomID).emit('over', {'winner': 1});
+						else serv_io.to(roomID).emit('over', {'winner': 0});
 						room[rid].state = 3;
 						break;
 					}								
@@ -330,11 +365,11 @@ function game_judge(data, rid, roomID, player_sit_index){
 			return -1;
 			break;
 	}
-	console.log(roomID);
+	//console.log(roomID);
 	brocasting(roomID);
 }
 
-function BOT_check_greater(rid, player_sit_index, card){
+function BOT_check_greater(rid, player_sit_index, card){//check if there is any greater card of the color on others' hand
 	var color = Math.floor((card - 1) / 13);
 	var up_limit = (color + 1) * 13;
 	
@@ -344,11 +379,13 @@ function BOT_check_greater(rid, player_sit_index, card){
 			if(tmp <= up_limit && tmp > card) return true;
 		}
 	}
+	return false;
 }
-
+/////////////////////////////////////////////////////////////////////////////////
 function Bot_play(rid, roomID, player_sit_index){
 	var val;
-	console.log('bot' + player_sit_index);	
+	console.log('bot' + player_sit_index);
+
 	//console.log(room[rid].player_cards[player_sit_index]);
 	switch(room[rid].state){
 		case 1:
@@ -369,6 +406,8 @@ function Bot_play(rid, roomID, player_sit_index){
 				if(card_point)
 					color[1][Math.floor((card - 1)/ 13)] ++;
 			}
+			for(var i = 0; i < 4; i ++)
+				if(color[i] > 5) point[i] += 5;
 			var best = point[0], best_index = 0;
 			for(var i = 1; i < 4; i ++){
 				if(point[i] > best){
@@ -393,6 +432,10 @@ function Bot_play(rid, roomID, player_sit_index){
 			game_judge({'player_id': 'BOT', 'user_data': val}, rid, roomID, player_sit_index);
 			break;
 		case 2:
+			/*for(var i = 0; i < 13; i ++){
+				if(room[rid].player_cards[player_sit_index][i] != -1)console.log(printCard(room[rid].player_cards[player_sit_index][i]));
+			}*/
+			var king_color = (room[rid].bid[1] - 1) % 5 + 1;
 			var card_class = [[], [], [], []];
 			for(var i = 0; i < 13; i ++){//scanning
 				if(room[rid].player_cards[player_sit_index][i] != -1){
@@ -400,18 +443,258 @@ function Bot_play(rid, roomID, player_sit_index){
 					card_class[color][card_class[color].length] = room[rid].player_cards[player_sit_index][i];
 				}
 			}
-			switch(room[rid].target_count == 0){
-				case 0:
+			for(var i = 0; i < 4; i ++){
+				var str_list = [];
+				for(var j = 0; j < card_class[i].length; j ++){
+					str_list[str_list.length] = printCard(card_class[i][j]);
+				}
+				console.log(str_list);
+			}
+			switch(room[rid].target_count){
+				case 0://no cards on desk, starting a new round					
+					console.log('in case 0: there is no card on the table');
+					val = -1;
+					for(var i = 0; i < 4; i ++){
+						if(i != king_color - 1 && room[rid].color_left[i] > 5 && card_class[i].length && !room[rid].player_less_color[(player_sit_index + 1) % 4][king_color - 1] && !room[rid].player_less_color[(player_sit_index + 3) % 4][king_color - 1]){
+							console.log('	' + printColor(i) + 'matches rule 1, try to win this round with ' + printColor(i));
+							for(var j = 0; j < card_class[i].length; j ++){
+								if(!BOT_check_greater(rid, player_sit_index, card_class[i][j])){
+									val = card_class[i][j];
+									break;
+								}
+							}
+						}
+						if(val != -1) break;
+					}
+					if(val != -1) break;
+					else console.log('	 No match for rule 1');
+					for(var i = 0; i < 4; i ++){
+						if(card_class[i].length && i != king_color - 1 && !room[rid].player_less_color[(player_sit_index + 1) % 4][king_color - 1] && room[rid].player_less_color[(player_sit_index + 2) % 4][king_color - 1]  && !room[rid].player_less_color[(player_sit_index + 3) % 4][king_color - 1]){
+							console.log('	' + printColor(i) + 'matches rule 2, try to feed partner, expecting partner to win with king color');
+							if(room[rid].feed_last_king[(player_sit_index + 2) % 4] == -1 || room[rid].feed_last_king[(player_sit_index + 2) % 4] < 6){
+								val = card_class[king_color - 1];
+								console.log('	feeding partner');
+							}
+						}
+					}
+					if(val != -1) break;
+					else console.log('	 No match for rule 2');
+					var ok_list = [];
+					for(var i = 0; i < 4; i ++){
+					//room[rid].bidList[room[rid].(player_sit_index + 2) % 4].indexOf(i) != -1
+						if(card_class[i].length && i != king_color - 1 && !room[rid].player_less_color[(player_sit_index + 1) % 4][king_color - 1] && !room[rid].player_less_color[(player_sit_index + 3) % 4][king_color - 1] && room[rid].bidList[(player_sit_index + 2) % 4].indexOf(i) != -1) ok_list[ok_list.length] = i;
+					}
+					if(ok_list.length){
+						var smallest = 13, index = -1;
+						for(var i = 0; i < ok_list.length; i ++){
+							if(i == 0)console.log('');
+							console.log(printColor(ok_list[i]) + ' ');
+							if(i == ok_list.length - 1) console.log('matches rule 3, try to feed partner, expecting partner to win with one of these color');
+
+							if((card_class[ok_list[i]][0] - 1) % 13 + 1 < smallest){
+								smallest = (card_class[ok_list[i]][0] - 1) % 13 + 1;
+								index = i;
+							}
+							else if((card_class[ok_list[i]][0] - 1) % 13 + 1 == smallest){
+								if(card_class[ok_list[i]].length > card_class[ok_list[index]].length){
+									smallest = (card_class[ok_list[i]][0] - 1) % 13 + 1;
+									index = i;
+								}
+							}
+						}			
+						val = card_class[ok_list[index]][0];
+					}
+					else console.log('	partner call nothing at bidding state');
+					if(val != -1) break;
+					else console.log('	 No match for rule 3');
+					for(var i = 0; i < 4; i ++){
+						if(i != king_color - 1 && card_class[i].length){
+							console.log('	' + printColor(i) + 'matches rule 4, try to win this round with ' + printColor(i));
+							for(var j = 0; j < card_class[i].length; j ++){
+								if(!BOT_check_greater(rid, player_sit_index, card_class[i][j])){
+									val = card_class[i][j];
+									break;
+								}
+							}
+						}
+						if(val != -1) break;
+					}
+					if(val != -1) break;
+					else console.log('	 No match for rule 4');
+					if(card_class[king_color - 1].length){
+						console.log('	' + printColor(king_color - 1) + 'matches rule 6, try to win this round with king color');
+						for(var j = 0; j < card_class[king_color - 1].length; j ++){////bug
+							if(!BOT_check_greater(rid, player_sit_index, card_class[king_color - 1][j])){
+								val = card_class[king_color - 1][j];
+								break;
+							}
+						}
+					}
+					if(val != -1) break;
+					else console.log('	 No match for rule 6');
+					console.log('	 throw a useless card');
+					var smallest = 14, index = -1;
+					var choice = [];
+					for(var i = 0; i < 4; i ++){//list all choice
+						if(i == king_color - 1) i ++;
+						if(i == 4) break;
+						if(card_class[i].length) choice[choice.length] = i;
+					}
+					if(!choice.length){
+						console.log('	 No other card, try king color');
+						choice[choice.length] = king_color - 1;
+					}
+					for(var i = 0; i < choice.length; i ++){
+						if((card_class[choice[i]][0] - 1) % 13 + 1 % 13 < smallest){////bug
+							smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+							index = i;
+						}
+						else if((card_class[choice[i]][0] - 1) % 13 + 1 == smallest){
+							if(card_class[choice[i]].length > card_class[choice[index]].length){
+								smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+								index = i;
+							}
+						}
+					}
+					val = card_class[choice[index]][0];
 					break;
-				case 1:
-					//room[rid].table_card[room[rid].target_count ++] = card;
+				case 1://1 cards on desk					
+					console.log('in case 1: there is 1 card on the table');
+					var throw_useless = false;
+					if(card_class[room[rid].target_color - 1].length){//king_color
+						console.log('	try to win with target color');
+						if(room[rid].target_color == king_color){
+							var try_this_card = card_class[king_color - 1][card_class[king_color - 1].length - 1];
+							if(try_this_card > room[rid].table_card[0]){
+								console.log('	measuring the king color cards');
+								var win_card = [];
+								for(var i = 0; i < card_class[king_color - 1].length; i ++){
+									if(card_class[king_color - 1][i] > room[rid].table_card[0]){
+										win_card[win_card.length] = card_class[king_color - 1][i];
+									}
+								}
+								if((win_card[0] - 1) % 13 + 1 < 11){
+									console.log('	winning with less than Q is possible');
+									val = win_card[0];
+								}
+								else{
+									console.log('	winning with less than Q is not possible');
+									for(var i = 0; i < win_card.length; i ++){
+										if(win_card[i] - room[rid].table_card[0] < 4){
+											val = win_card[i];
+										}
+									}
+									if(val == -1){
+										val = card_class[king_color - 1][0];
+										console.log('	failed: bot\'s cards of king color is not sutible');	
+									}
+								}
+							}
+							else{
+								console.log('	failed: bot\'s cards of target color is not big enough');
+								val = card_class[king_color - 1][0];
+							}
+						}
+						else{
+							var try_this_card = card_class[room[rid].target_color - 1][card_class[room[rid].target_color - 1].length - 1];
+							console.log(!room[rid].player_less_color[(player_sit_index + 1) % 4][target_color - 1]);
+							console.log(try_this_card > room[rid].table_card[0]);
+							console.log(!BOT_check_greater(rid, player_sit_index, try_this_card));
+							if(!room[rid].player_less_color[(player_sit_index + 1) % 4][target_color - 1] && try_this_card > room[rid].table_card[0] && !BOT_check_greater(rid, player_sit_index, try_this_card)
+							){
+								val = try_this_card;
+							}
+							else{////bug
+								console.log('	failed: enemy is less on target color');
+								val = card_class[room[rid].target_color - 1][0];
+							}
+						}
+					}
+					else{
+						console.log('	bot don\'t have target color');
+						console.log('	try to win with king color');
+						if(room[rid].target_color == king_color){
+							console.log('	failed: king color is target color');
+							throw_useless = true;
+						}
+						else{
+							if(card_class[king_color - 1].length){
+								if((card_class[king_color - 1][0] - 1) % 13 + 1 < 9){
+									val = card_class[king_color - 1][0];
+								}
+								else{
+									console.log('	failed: bot\'s cards of king color may probabaly be won by enemy');
+									throw_useless = true;
+								}
+							}
+							else{
+								console.log('	failed: bot don\'t have king color');
+								throw_useless = true;
+							}
+						}
+					}
+					
+					if(throw_useless){
+						var smallest = 14, index = -1;
+						var choice = [];
+						for(var i = 0; i < 4; i ++){//list all choice
+							if(i == king_color - 1) i ++;
+							if(i == 4) break;
+							if(card_class[i].length) choice[choice.length] = i;
+						}
+						if(!choice.length){
+							console.log('	 No other card, try king color');
+							choice[choice.length] = king_color - 1;
+						}
+						for(var i = 0; i < choice.length; i ++){
+							if((card_class[choice[i]][0] - 1) % 13 + 1 < smallest){
+								smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+								index = i;
+							}
+							else if((card_class[choice[i]][0] - 1) % 13 + 1 == smallest){
+								if(card_class[choice[i]].length > card_class[choice[index]].length){
+									smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+									index = i;
+								}
+							}
+						}
+						val = card_class[choice[index]][0];//
+					}
 					break;
-				case 2:
+				case 2://2 cards on desk  
+					console.log('in case 2: there are 2 cards on the table');
+					console.log('	throw any card');
+					if(card_class[room[rid].target_color - 1].length) val = card_class[room[rid].target_color - 1][0];
+					else{
+						var smallest = 14, index = -1;
+						var choice = [];
+						for(var i = 0; i < 4; i ++){//list all choice
+							if(i == king_color - 1) i ++;
+							if(i == 4) break;
+							if(card_class[i].length) choice[choice.length] = i;
+						}
+						if(!choice.length){
+							console.log('	 No other card, try king color');
+							choice[choice.length] = king_color - 1;
+						}
+						for(var i = 0; i < choice.length; i ++){
+							if((card_class[choice[i]][0] - 1) % 13 + 1 < smallest){
+								smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+								index = i;
+							}
+							else if((card_class[choice[i]][0] - 1) % 13 + 1 == smallest){
+								if(card_class[choice[i]].length > card_class[choice[index]].length){
+									smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
+									index = i;
+								}
+							}
+						}
+						val = card_class[choice[index]][0];
+					}
 					break;
 				case 3://3 cards on desk
-					console.log('in case 3:');
+					console.log('in case 3: there are 3 cards on the table');
 					var winner = 0, win_scroce = 0, scroce = 0, target = player_sit_index, winner_index = 0;
-					var king_color = (room[rid].bid[1] - 1) % 5 + 1;
 					var throw_useless = false;
 					for(var i = 0; i < 3; i ++){//checking who is winning
 						scroce = 0; 
@@ -455,7 +738,7 @@ function Bot_play(rid, roomID, player_sit_index){
 							}
 							else{
 								card = -1;
-								for(var i = 0; i < card_class[room[rid].king_color - 1].length; i ++){//find a card to win
+								for(var i = 0; i < card_class[king_color - 1].length; i ++){//find a card to win//bug!!!!
 									card = card_class[room[rid].target_color - 1][i];
 									if(card > winner_card){
 										console.log('	found the smallest card that can win this round: ' + printCard(card));
@@ -473,7 +756,7 @@ function Bot_play(rid, roomID, player_sit_index){
 							console.log('	bot don\'t have target color');
 							console.log('	try to win with king color');
 							if(room[rid].target_color == king_color){
-								console.log('	failed: bot don\'t have king(target) color');
+								console.log('	failed: king color is target color');
 								throw_useless = true;
 							}
 							else if(winner_card_color == king_color){//enemy win with king color
@@ -512,22 +795,25 @@ function Bot_play(rid, roomID, player_sit_index){
 					}
 					
 					if(throw_useless){
-						var largest = 0, index = -1;
+						var smallest = 14, index = -1;
 						var choice = [];
 						for(var i = 0; i < 4; i ++){//list all choice
 							if(i == king_color - 1) i ++;
 							if(i == 4) break;
-							choice[choice.length] = i;
+							if(card_class[i].length) choice[choice.length] = i;
 						}
-						var smallest = 13, index = -1;
+						if(!choice.length){
+							console.log('	 No other card, try king color');
+							choice[choice.length] = king_color - 1;
+						}
 						for(var i = 0; i < choice.length; i ++){
-							if(card_class[choice[i]][0] % 13 < smallest){
-								smallest = card_class[choice[i]][0] % 13;
+							if((card_class[choice[i]][0] - 1) % 13 + 1 < smallest){
+								smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
 								index = i;
 							}
-							else if(card_class[choice[i]][0] % 13 == smallest){
-								if(card_class[choice[i]].length > card_class[index].length){
-									smallest = card_class[choice[i]][0] % 13;
+							else if((card_class[choice[i]][0] - 1) % 13 + 1 == smallest){
+								if(card_class[choice[i]].length > card_class[choice[index]].length){
+									smallest = (card_class[choice[i]][0] - 1) % 13 + 1;
 									index = i;
 								}
 							}
@@ -538,7 +824,7 @@ function Bot_play(rid, roomID, player_sit_index){
 				default:
 					break;
 			}
-			console.log('bot' + player_sit_index + ' picked: ' + printCard(card));
+			console.log('bot' + player_sit_index + ' picked: ' + printCard(val));
 			game_judge({'player_id': 'BOT', 'user_data': val}, rid, roomID, player_sit_index);
 				//if(!BOT_check_greater(rid, player_sit_index, card));
 				
@@ -560,7 +846,7 @@ function Bot_play(rid, roomID, player_sit_index){
 			break;
 	}
 }
-
+/////////////////////////////////////////////////////////////////////////////////
 serv_io.sockets.on('connection', function(socket) {
 	socket.emit('player_id', {'player_id': ++player_count, 'state': 0, 'display_message': display_message});
 	var player_id = player_count;
@@ -586,9 +872,9 @@ serv_io.sockets.on('connection', function(socket) {
 	function timeoutBot(){
 		if(roomID == -1) return;
 		var rid = findRoom(roomID);
-		console.log(rid);
+		//console.log(rid);
 		Bot_play(rid, roomID, room[rid].target);
-		if(room[rid].player_sit[room[rid].target] == 'BOT') setTimeout(function(){ timeoutBot(); }, bot_wait);
+		if(room[rid].player_sit[room[rid].target] == 'BOT' && room[rid].state < 3) setTimeout(function(){ timeoutBot(); }, bot_wait);
 	}
 	
 	socket.on('FindGame',function(){
@@ -693,6 +979,7 @@ serv_io.sockets.on('connection', function(socket) {
 	socket.on('EXIT',function(){
 		var rid = findRoom(roomID);//room[rid].room[roomID].player_sit.length
 		leaveRoom(socket, rid, player_id);
+		//socket.leave(roomID);
 		socket.emit('init', 1);
 	});
 	
@@ -713,8 +1000,9 @@ serv_io.sockets.on('connection', function(socket) {
 		if(tmp != -1)
 			player.splice(tmp,1);
 		if(roomID != -1){
-			var rid = findRoom(room[rid]);//room[rid].
+			var rid = findRoom(roomID);//room[rid].
 			leaveRoom(socket, rid, player_id);
+			//socket.leave(roomID);
 		}
 		
 		var userlist = [];
