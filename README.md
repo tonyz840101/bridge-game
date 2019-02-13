@@ -1,6 +1,6 @@
 bridge-game  2017.01
 
-I have two roomate when I was a college student. Sometimes we want to play bridge, so I made this bridge game with bots that can be the 4th person and play with us. 
+I have two roomate when I was a college student. Sometimes, when we want to play bridge, we need to find another person. So I made this bridge game with bots that can be the 4th person and play with us. 
 
 How to run 
   Run the server with nodejs.
