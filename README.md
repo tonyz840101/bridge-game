@@ -15,3 +15,6 @@ The game is rendered with HTML canvas.
 
 The bot is not fully functional, it still has some bug in it.
 Due to the bot issue, the interface is still simple.
+
+with module:
+https://drive.google.com/drive/folders/1TOdWGkGAGCK-pTNYNpX0eAAfvUIdQnnS
