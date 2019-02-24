@@ -78,8 +78,8 @@ const playerState = {
 	'playing': 3,
 	'end': 4,
 }
-const botWaitingTime = 3141//2500
-const botReport = false//true
+const botWaitingTime = 2560//2500
+const botReport = true//true
 const cardPatternsPic = ['♣', '♦','♥', '♠']
 const cardPointsText = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K','A']
 let roomList = []
@@ -646,7 +646,7 @@ function botPlay(room, id){
 					}
 				}
 			} else {
-				if(room.currentRoundPattern != trump){
+				if(room.currentRoundPattern != trump && trump != 4){
 					if(!room.playerInfo[(id + 1) % 4].patternWithout[room.currentRoundPattern]){
 						result = cardInPattern[trump][0]
 						if(botReport){
@@ -754,13 +754,16 @@ function botPlay(room, id){
 				
 			} else {
 				if(botReport) console.log('  S_22: I don\'t have card of this pattern')
-				if(cardInPattern[trump].length){
-					result = cardInPattern[trump][0]
-					if(botReport){
-						console.log('  S_22-1: try trump')
-						console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
+				if(trump != 4){//if trump exist
+					if(cardInPattern[trump].length){
+						result = cardInPattern[trump][0]
+						if(botReport){
+							console.log('  S_22-1: try trump')
+							console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
+						}
 					}
-				} else {
+				}
+				if(result == -1) {
 					if(botReport){
 						console.log('  S_22-2: don\'t have trump')
 						console.log('    will throw useless')
@@ -832,39 +835,46 @@ function botPlay(room, id){
 							console.log('    will throw useless')
 						}
 					} else {//try
-						if(!room.playerInfo[id].patternWithout[trump]){//I have trump
-							if(botReport){
-								console.log('  S_32-3: normal pattern, I don\'t have, partner losing, i have trump')
-							}
-							if(~~(currentMax/13) == trump){
-								for(let i of cardInPattern[trump]){
-									if(i > currentMax){
-										result = i
-										break
-									}
+						if(trump != 4){
+							if(!room.playerInfo[id].patternWithout[trump]){//I have trump
+								if(botReport){
+									console.log('  S_32-3: normal pattern, I don\'t have, partner losing, i have trump')
 								}
-								if(result != -1){
-									if(botReport){
-										console.log('  S_32-3.1: my trump will win')
-										console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
+								if(~~(currentMax/13) == trump){
+									for(let i of cardInPattern[trump]){
+										if(i > currentMax){
+											result = i
+											break
+										}
+									}
+									if(result != -1){
+										if(botReport){
+											console.log('  S_32-3.1: my trump will win')
+											console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
+										}
+									} else {
+										if(botReport){
+											console.log('  S_32-3.1: my trump can\'t win')
+											console.log('    will throw useless')
+										}
 									}
 								} else {
-									if(botReport){
-										console.log('  S_32-3.1: my trump can\'t win')
-										console.log('    will throw useless')
+									result = cardInPattern[trump][0]
+									if(result != -1){
+										if(botReport){
+											console.log('  S_32-3.2: trump beat normal')
+											console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
+										}
+									} else {
+										if(botReport){
+											console.log('  S_32-3.2: should\'t happen')
+										}
 									}
 								}
-							} else {
-								result = cardInPattern[trump][0]
-								if(result != -1){
-									if(botReport){
-										console.log('  S_32-3.2: trump beat normal')
-										console.log('    find  '+cardPatternsPic[~~(result/13)]+cardPointsText[result%13])
-									}
-								} else {
-									if(botReport){
-										console.log('  S_32-3.2: should\'t happen')
-									}
+							} else {//can't do a thing
+								if(botReport){
+									console.log('  S_32-4: normal pattern, I don\'t have, partner losing, i don\'t have trump')
+									console.log('    will throw useless')
 								}
 							}
 						} else {//can't do a thing
