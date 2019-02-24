@@ -6,399 +6,169 @@
 	<!--script src="http://code.jquery.com/jquery-1.11.0.min.js"></script-->
 	<script src="poker.min.js"></script>
 	<style>
-		canvas {
-			float:left;
-			background-color: #00DD00;
-			display: block;
-			margin: 0 auto;
+		html{
+			background-color: #101010;
+		}
+		#container{
+			text-align: center;
+			background-color: #101010;
+			width: 100%;
+			height: 100%;
+			z-index: -1;
 		}
 		#left{
+			display: block;
 			margin:0 auto;
-			font-size:20px;
-			width:150px;
-			height:100%;
-			text-align:left;
-			float:left;
+			font-size: 20px;
+			width: 170px;
+			height: 100%;
+			text-align: left;
+			float: left;
+			background-color: rgba(255, 255, 255, 0.6);
+			z-index: 1;
+		}
+		.insideLeft{
+			margin: 10px;
+		}
+		#content{
+			display: block;
+			margin: 0 auto;
+			height: 100%;
+			width: 620px;
+			float: left;
+			z-index: 1;
 		}
 		#header{
-			height:100px;
+			height: 100px;
 		}
 		#userlist{
 		}
-		#content{
-			//width:80%;
-			height:100%;
-			text-align:center;
-			float:left;
+		#username{
+			height: 50px;
+			line-height: 50px;
+		}
+		#gameMessage{
+			margin: 10px;
+			text-align: left;
+			width: 600px;
+			height: 70px;
+			font-size: 40px;
+			color: white;
+		}
+		#table{
+			background-color: rgb(57, 130, 90);;
+			float: left;
+			left: 0px;
+			margin: 10px;
+		}
+		#lobby_message{
+			width: 100%;
+			height: 50px;
+			line-height: 50px;
+		}
+		#bidding{
+			margin-top: 10px;
+			height: 50px;
+			line-height: 50px;
+		}
+		input{
+			margin-top: -10px
+		}
+		.call{
+			font-size: 40px;
+			width: 50px;
+			height: 50px;
+			line-height: 50px;
+			text-align: center;
+		}
+		.manuBtn{
+			border-style: solid;
+			border-color: rgba(255, 255, 255, 0.7);
+			font-size: 20px;
+			width: 100%;
+			height: 50px;
+		}
+		* {
+			font-family: Microsoft JhengHei;
+			padding: 0;
+			margin: 0;
 		}
 	</style>
 </head>
 <body>
-	<h2 id="username"></h2>
-	<div id="left">
-		<button id="FindGame">Find a game!</button>
-		<button id="BotAdd" style="visibility:hidden">Bot add</button>
-		<p id="lobby_message">Welcome!</p>
-		<hr>
-		<div id="userlist"></div>
-	</div>
-	<div id="content">
-		<canvas id="table" width="600" height="600"></canvas>
-		<div id="bidding" style="visibility:hidden">
-			<input type="number" id="call_number" style="font-size:40px; width: 50px; height: 50px;"></textarea>
-			<button id="NT" style="font-size:40px; width: 50px; height: 50px;">N</button>
-			<button id="spade" style="font-size:40px; width: 50px; height: 50px;">♠</button>
-			<button id="heart" style="font-size:40px; width: 50px; height: 50px; color: red;">♥</button>
-			<button id="diamond" style="font-size:40px; width: 50px; height: 50px; color: red;">♦</button>
-			<button id="clover" style="font-size:40px; width: 50px; height: 50px;">♣</button>
-			<button id="pass" style="font-size:40px; width: 50px; height: 50px;">P</button>
+	<div id="container">
+		<div id="left">
+			<h2 class="insideLeft" id="username"> &nbsp </h2>
+			<button class="manuBtn" id="FindGame">Find a game!</button>
+			<button class="manuBtn" id="AddBot">add a bot</button>
+			<div class="insideLeft" id="lobby_message">Welcome!</div>
+			<hr>
+			<div class="insideLeft" id="userlist"></div>
 		</div>
-		<button id="EXIT">EXIT</button>
+		<div id="content">
+			<div id="gameMessage">
+			</div>
+			<canvas id="table" width="600" height="600"></canvas>
+			<div id="bidding">
+				<input type="number" id="call_number" class="call" value="1"></input>
+				<button id="NT" class="call pattern">N</button>
+				<button id="spade" class="call pattern">♠</button>
+				<button id="heart" class="call pattern" style="color: red;">♥</button>
+				<button id="diamond" class="call pattern" style="color: red;">♦</button>
+				<button id="clover" class="call pattern">♣</button>
+				<button id="pass" class="call pattern">P</button>
+			</div>
+			<button id="EXIT">EXIT</button>
+		</div>
 	</div>
 
 	<script>
-	var name;
-	var up = -1;
-	var socket = io.connect();
-	var player_id = 0;
-	var player_cards = [];
-	var player_sit = [];
-	var goals = [];
-	var teams = [];
-	var player_sit_index = -2;
-	var on_table = [-1, -1, -1, -1];
-	var current_call = -1;
-	var calling = false;
-	var CallOver = false;
-	var canvas = document.getElementById("table");
-	var ctx = canvas.getContext("2d");
-	var state = 0;
-	var moving = -1;
-	var param = {};
-	var result = -1;
-	var player_names = [];
-
-
-	function init(){
-		document.getElementById('lobby_message').innerHTML = 'Welcome!';
-		up = -1;
-		player_cards = [];
-		player_sit = [];
-		player_names = [];
-		goals = [];
-		teams = [];
-		player_sit_index = -2;
-		on_table = [-1, -1, -1, -1];
-		current_call = -1;
-		calling = false;
-		CallOver = false;
-		state = 0;
-		moving = -1;
-		result = -1;
-		document.getElementById("bidding").style.visibility="hidden";
-		document.getElementById("EXIT").style.visibility="hidden";
-		document.getElementById("BotAdd").style.visibility="hidden";
+	'use strict'
+	const socket = io.connect()
+	const playerState = {
+		'in_lobby': 0,
+		'waiting_to_start': 1,
+		'calling_bid': 2,
+		'playing': 3,
+		'end': 4,
+	}
+	const canvas = document.getElementById("table")
+	const ctx = canvas.getContext("2d")
+	const cardPatterns = ['clubs', 'diamonds','hearts', 'spades']
+	const cardPoints = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k','a']
+	const cardPatternsPic = ['♣', '♦','♥', '♠']
+	const cardPointsText = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K','A']
+	const FPS = 20
+	const ResatrtTime = 60
+	let name = ''
+	let playerId = -1
+	let currentState = -1
+	let currentCall = {'bid': -1, 'caller': -1}
+	let playerInfo = -1//-1 if not calling_bid/playing
+	let roomInfo = -1
+	let playerSitIndex = -1
+	let cardMouseUp = -1
+	let layingCard = false
+	let restartCount = -1
+	
+	{
+		$('#bidding').hide()
+		$('#EXIT').hide()
+		$('#AddBot').hide()
 	}
 	
-	function showpoker(data) {
-		var h = 120, w = 35, x = 80, y = 480, suits = ['clubs', 'diamonds','hearts', 'spades'], points = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k','a'];
-		param.h = h;
-		param.w = w;
-
-		for (var key = 0; key < data.length; key ++) {
-			var i = data[key];
-			if(i != -1){
-				if(key == up) y -= 30;
-				ctx.drawPokerCard(x, y, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
-				x += w;
-				if(key == up) y += 30;
-			}
+	$('#FindGame').click(() => {
+		if(currentState == playerState.in_lobby){
+			socket.emit('findGame')
+			$('#AddBot').show()
+		} else if(currentState == playerState.end){
+			$('#FindGame').text('Find a game!')
+			socket.emit('leave')
 		}
-	}
-
-	function showtable(data) {
-		var h = 120, w = 80, x = 0, y = 0, suits = ['clubs', 'diamonds','hearts', 'spades'], points = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k','a'];
-		if(player_sit_index > -1){
-			var i = data[(player_sit_index + 1) % 4];
-			if(i != -1) ctx.drawPokerCard(200, 240, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
-			i = data[(player_sit_index + 2) % 4];
-			if(i != -1) ctx.drawPokerCard(260, 140, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
-			i = data[(player_sit_index + 3) % 4];
-			if(i != -1) ctx.drawPokerCard(320, 240, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
-			i = data[(player_sit_index + 4) % 4];
-			if(i != -1) ctx.drawPokerCard(260, 340, h, suits[Math.floor((i - 1) / 13)], points[(i - 1) % 13]);
-		}
-	}
-	
-	$('#FindGame').click(function(){
-		socket.emit('FindGame', true);
-		document.getElementById("BotAdd").style.visibility="visible";
-		return false;
-	});
-	
-	$('#BotAdd').click(function(){
-		socket.emit('BotAdd', true);
-		return false;
-	});
-	
-	$('#EXIT').click(function(){
-		socket.emit('EXIT', true);
-		return false;
-	});
-	
-	socket.on('message', function(msg) {
-		document.getElementById('lobby_message').innerHTML = msg;
-	});
-	
-	socket.on('alert', function(msg) {
-		alert(msg);
-	});
-	
-	socket.on('init', function() {
-		init();
-		socket.emit('init', 1);
-	});
-	
-	function legal_call(t) {
-		var c_num = document.getElementById("call_number").value;
-		if(c_num <= 0 || c_num > 7){
-			alert("Illegal call!");
-			return false;
-		}
-		if(((c_num - 1) * 5 + t) <= current_call){
-			alert("Illegal call!");
-			return false;
-		}
-		return ((c_num - 1) * 5 + t);
-	}
-
-	function call(t) {
-		if(t == 'pass') socket.emit('user_data', {'player_id': player_id , 'user_data': 'pass'});
-		else socket.emit('user_data', {'player_id': player_id , 'user_data': t + 1});
-		document.getElementById("bidding").style.visibility="hidden";
-		//console.log(document.getElementById("bidding").style.visibility);
-		calling = false;
-	}
-
-	$('#NT').click(function() {
-		var c_check = legal_call(4);
-		if(c_check) call(c_check);
-		return false;
-	});
-
-	$('#spade').click(function() {
-		var c_check = legal_call(3);
-		if(c_check) call(c_check);
-		return false;
-	});
-
-	$('#heart').click(function() {
-		var c_check = legal_call(2);
-		if(c_check) call(c_check);
-		return false;
-	});
-
-	$('#diamond').click(function() {
-		var c_check = legal_call(1);
-		if(c_check) call(c_check);
-		return false;
-	});
-
-	$('#clover').click(function() {
-		var c_check = legal_call(0);
-		if(c_check !== false) call(c_check);
-		return false;
-	});
-
-	$('#pass').click(function() {
-		if(current_call == -1) alert("You shall not pass!");
-		else call('pass');
-		return false;
-	});
-	
-	socket.on('over', function(data) {
-		document.getElementById("EXIT").style.visibility="visible";
-		result = data.winner;//display_message = "Your team Win:)";
-		//display_message = "Your team Lose:(";
-		//alert(display_message);
-	});
-
-	function Ready_to_call() {
-		document.getElementById("bidding").style.visibility="visible";
-		calling = true;
-	}
-	
-	socket.on('player_id', function(data) {//init
-		player_id = data.player_id
-		init();
-		name = prompt("請輸入暱稱","guest");
-		if(name == "" || name == null) name = "guest";
-		var str1 = 'Hi ' + name + '!';
-		$('#username').text(str1);
-		//console.log(name == "" || name == null);
-		//console.log(name);
-		socket.emit("add user", name);
-	});
-	
-	socket.on('userlist', function(data) {
-		$('#userlist').text('Current online');
-		for(var i = 0; i < data.userlist.length; i ++)
-			$('#userlist').append($('<li>').text(data.userlist[i]));
-	});
-	
-	socket.on('get_data', function(data) {
-		state = data.state;
-		if(data.roomID != -1){
-			if(data.state){
-				document.getElementById("BotAdd").style.visibility="hidden";
-				player_sit_index = data.player_sit.indexOf(player_id);
-			}
-			on_table = data.on_table.slice();
-			player_cards = data.player_cards[player_sit_index].slice();
-			player_sit = data.player_sit.slice();
-			teams = data.teams.slice();
-			goals = data.goals.slice();
-			if(!player_names.length) player_names = data.player_names.slice();
-			moving = data.moving;
-			if(data.state != 3) document.getElementById("EXIT").style.visibility="hidden";
-			else document.getElementById("EXIT").style.visibility="visible";
-			if(data.state != 1 || moving != player_sit_index) document.getElementById("bidding").style.visibility="hidden";
-			if(data.state == 1){
-				current_call = data.current_call - 1;
-				if(moving == player_sit_index) Ready_to_call();
-			}
-			else if(data.state == 2) CallOver = true;
-		}
-	});
-	
-	function bid_parser(call) {
-		if(call == -1) return {'str': 'P', 'color': '#000000'};
-		var result = {'str': '', 'color': '#000000'}
-		var num = Math.floor(call / 5) + 1;
-		var str;
-		switch(call % 5){
-			case 0: str="♣ ";	break;
-			case 1: str="♦ ";	result.color = '#ff0000';	break;
-			case 2: str="♥ ";	result.color = '#ff0000';	break;
-			case 3: str="♠ ";	break;
-			case 4: str="NK";	break;
-		}
-		result.str = str + num.toString();
-		return result;
-	}
-
-	setInterval(function() {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		if(state == 1 || state == 2) showpoker(player_cards);
-		if(state >= 2)showtable(on_table);
-		if(result != -1){
-			if(result == player_sit_index % 2){
-				ctx.fillStyle = "#0000ff";
-				ctx.font = "40px Arial";
-				ctx.fillText("Your team Win:)", 170, 130);
-			}
-			else{
-				ctx.fillStyle = "#ff0000";
-				ctx.font = "40px Arial";
-				ctx.fillText("Your team Lose:(", 150, 130);
-			}
-		}
-		//alert(display_message);
-		/*if(document.getElementById("bidding").style.visibility == "visible"){
-			ctx.font = "40px Arial";
-			ctx.fillStyle = "#000000";
-			ctx.fillText("Your turn to call!", 170, 400);
-		}*/
-		/*if(moving == player_id){
-			if(state == 1){
-				ctx.font = "40px Arial";
-				ctx.fillStyle = "#000000";
-				ctx.fillText("Your turn to call!", 170, 400);
-			}
-			else if(state == 2){
-				ctx.font = "40px Arial";
-				ctx.fillStyle = "#ff0000";
-				ctx.fillText("Your turn!", 80, 445);
-			}
-		}*/
-		if(current_call != -1){
-			if(CallOver){
-				ctx.font = "40px Arial";
-				var pr = bid_parser(current_call);
-				ctx.fillStyle = "#0000ff";
-				ctx.fillText(pr.str, 10, 50);
-				ctx.font = "16px Arial";
-				
-				if(player_sit_index % 2){
-					ctx.fillStyle = "#0000ff";
-					ctx.fillText('Your team: '+teams[player_sit_index % 2]+'/'+goals[player_sit_index % 2], 450, 20);
-					ctx.fillStyle = "#ff0000";
-					ctx.fillText('Enemy team: '+teams[(player_sit_index + 1) % 2]+'/'+goals[(player_sit_index + 1) % 2], 450, 38);
-				}
-				/*else {
-					ctx.fillStyle = "#0000ff";
-					ctx.fillText('Your team: '+teams[1]+'/'+goals[1], 450, 20);
-					ctx.fillStyle = "#ff0000";
-					ctx.fillText('Enemy team: '+teams[0]+'/'+goals[0], 450, 38);
-				}*/
-			}
-			else {
-				ctx.font = "72px Arial";
-				var pr = bid_parser(current_call);
-				ctx.fillStyle = pr.color;
-				ctx.fillText(pr.str, 230, 300);
-			}
-		}
-		if(player_sit_index > -1){
-			ctx.font = "36px Arial";
-			ctx.fillStyle = "#000000";
-			ctx.fillText(player_names[player_sit_index], 10, 450);
-			ctx.fillText(player_names[(player_sit_index + 1) % 4], 10, 170);
-			ctx.fillText(player_names[(player_sit_index + 2) % 4], 150, 50);
-			ctx.fillText(player_names[(player_sit_index + 3) % 4], 450, 170);
-		}
-		var seat = (moving - player_sit_index + 4) % 4;
-		/*for(i = 0; i < player_sit.length; i ++){
-			if(player_sit[(player_sit_index + i) % 4] == moving) seat = i;
-		}*/
-		if(seat != -1 && state > 0 && state < 3){
-			ctx.beginPath();
-			switch(seat){
-				case 0://300, 400
-					ctx.moveTo(300, 420);
-					ctx.lineTo(280, 410);
-					ctx.lineTo(300, 460);
-					ctx.lineTo(320, 410);
-					break;
-				case 1://240, 300
-					ctx.moveTo(220, 300);
-					ctx.lineTo(230, 280);
-					ctx.lineTo(180, 300);
-					ctx.lineTo(230, 320);
-					break;
-				case 2://300, 200
-					ctx.moveTo(300, 180);
-					ctx.lineTo(280, 190);
-					ctx.lineTo(300, 140);
-					ctx.lineTo(320, 190);
-					break;
-				case 3://360, 300
-					ctx.moveTo(380, 300);
-					ctx.lineTo(370, 280);
-					ctx.lineTo(420, 300);
-					ctx.lineTo(370, 320);
-					break;
-				default:
-					break;
-			}
-			ctx.fillStyle = "#ff0000";
-			ctx.fill();
-			ctx.closePath();
-		}
-	},50)
+	})
 	
 	function getMousePos(canvas, e){
-		var rect = canvas.getBoundingClientRect();
+		let rect = canvas.getBoundingClientRect()
 		return {
 			x: e.clientX - rect.left,//相對於Canvas左上角的X座標
 			y: e.clientY - rect.top,//相對於Canvas左上角的Y座標
@@ -409,47 +179,488 @@
 		}
 	};
 	
-	canvas.addEventListener('click', function(e) {
-		if(moving != player_sit_index || state != 2) return;
-		var pos = getMousePos(canvas, e);
-		var x = 80, y = 480, w = 35, h = 120;
-		var val = -1;
-		var pivot = 0;
-		for(i = 0; i < 13; i ++)
-			if(player_cards[i] != -1) pivot = i;
-		var tmpx = x;
-		for(i = 0; i < 13; i ++){
-			if(player_cards[i] != -1){
-				if(i == pivot) w = 80;
-				if((pos.x >= tmpx && pos.x < tmpx + w) && (pos.y >= y && pos.y < y+h))
-				val = player_cards[i];
-				tmpx += 35;
+	function init(){
+		$('#lobby_message').text('Welcome!')
+		$('#bidding').hide()
+		$('#EXIT').hide()
+		$('#AddBot').hide()
+		$('#gameMessage').text('')
+		$('#call_number').val(1)
+		$('#FindGame').text('Find a game!')
+		currentState = 0
+		currentCall = {'bid': -1, 'caller': -1}
+		playerInfo = -1
+		roomInfo = -1
+		playerSitIndex = -1
+		cardMouseUp = -1
+		layingCard = false
+		restartCount = -1
+	}
+	
+	socket.on('init', () => {
+		console.log('init')
+		init()
+		socket.emit('initDone')
+		console.log('initDone')
+	})
+	
+	socket.on('askName', (data) => {
+		console.log('askName')
+		
+		playerId = data.playerId
+		name = prompt('請輸入暱稱', 'guest')
+		if(!name) name = "guest";
+		$('#username').text('Hi ' + name + '!')
+		console.log('name set: '+name+', id: '+playerId.toString())
+		socket.emit("addUser", name)
+		console.log('addUser')
+	})
+	
+	socket.on('playerInfo', (data) => {
+		console.log('playerInfo')
+		
+		playerInfo = data.playerInfo
+		playerSitIndex = data.playerSitIndex
+		console.log(playerInfo)
+	})
+	
+	socket.on('roomInfo', (data) => {
+		console.log('roomInfo')
+		
+		roomInfo = data
+		$('#lobby_message').text('Room '+data.roomId)
+		console.log(data)
+	})
+	
+	socket.on('calling', (lastCall) => {
+		console.log('calling')
+		
+		$('#bidding').show()
+	})
+	
+	socket.on('console', (msg) => {
+		console.log(msg)
+	})
+	
+	socket.on('playerCallABid', (data) => {
+		console.log('playerCallABid')
+		if(data.bid%5 == 4) $('#call_number').val(~~(data.bid/5)+1)
+		else $('#call_number').val(~~(data.bid/5))
+		currentCall = data
+		console.log(data)
+	})
+	
+	socket.on('getPlayerInfo', (data) => {//if needed
+		socket.emit("getPlayerInfo")
+	})
+	
+	socket.on('layingCard', (data) => {
+		layingCard = true;
+	})
+
+	socket.on('leaveRoom', (data) => {
+		init()
+	})
+	
+	socket.on('test', (data) => {
+		socket.emit("test", name)
+	})
+	
+	function leaveEmit(){
+		if(restartCount > 1000 || restartCount < 0) return
+		socket.emit("leave")
+	}
+	
+	socket.on('stateUpdate', (data) => {
+		console.log('stateUpdate => '+data.playerState)
+		
+		currentState = data.playerState
+		switch(currentState){
+			case playerState.in_lobby:{
+				break
 			}
+			case playerState.waiting_to_start:{
+				break
+			}
+			case playerState.calling_bid:{
+				$('#AddBot').hide()
+				//$('#bidding').show()
+				$('#gameMessage').text('Calling bid')
+				console.log($('#gameMessage').value)
+				socket.emit("getPlayerInfo")
+				console.log('getPlayerInfo')
+				break
+			}
+			case playerState.playing:{
+				$('#gameMessage').text('Start to play')
+				$('#bidding').hide()
+				break
+			}
+			case playerState.end:{
+				$('#FindGame').text('Exit')
+				$('#gameMessage').text('end')
+				restartCount = ResatrtTime * FPS
+				setTimeout( () => {
+					leaveEmit()
+				}, ResatrtTime*1000);
+				break
+			}
+			default:
+				return
+				break
 		}
-		if(val != -1){
-			socket.emit('user_data', {'player_id': player_id, 'user_data': val});
-			console.log('send: '+ val);
-		}
+	})
+	
+	$('#AddBot').click(() => {
+		socket.emit('addBot');
+		return false;
 	});
 	
-	canvas.addEventListener('mousemove', function(e) {
-		var pos = getMousePos(canvas, e);
-		var x = 80, y = 480, w = 35, h = 120;
-		var val = -1;
-		var pivot = 0;
-		for(i = 0; i < 13; i ++)
-			if(player_cards[i] != -1) pivot = i;
-		var tmpx = x;
-		for(i = 0; i < 13; i ++){
-			if(player_cards[i] != -1){
-				if(i == pivot) w = 80;
-				if((pos.x >= tmpx && pos.x < tmpx + w) && (pos.y >= y && pos.y < y+h))
-				val = i;
-				tmpx += 35;
+	$('#NT').click( () => {
+		call(4)
+	})
+
+	$('#spade').click( () => {
+		call(3)
+	})
+	$('#heart').click( () => {
+		call(2)
+	})
+	$('#diamond').click( () => {
+		call(1)
+	})
+	$('#clover').click( () => {
+		call(0)
+	})
+
+	$('#pass').click(function() {
+		call(-1)
+	})
+	
+	function call(pattern){
+		if(pattern == -1) {
+			if(currentCall.bid == -1){
+			//Show illegal
+				return
+			}
+			socket.emit('callBid', 'pass')
+			//console.log('call '+callNumToText(pattern).str)
+			$('#bidding').hide()
+			return
+		}
+		let callNum = $('#call_number').val()
+		if(callNum <= 0 || callNum > 7){// 6 + callNum => max 7
+			//Show illegal
+			return
+		}
+		let call = pattern + callNum*5
+		if(call > currentCall.bid){
+			socket.emit('callBid', call)
+			$('#bidding').hide()
+			//console.log('call '+callNumToText(call).str)
+		} else {
+			//Show illegal
+		}
+		return
+	}
+	
+	function callNumToText(call){
+		if(call == 'pass' || call == -1){
+			return {'str': 'pass', 'color': '#000000'}
+		}
+		let callPattern = call%5
+		let callNum = ~~(call/5)
+		let callText = callNum.toString()+' '
+		let color = '#000000'
+		switch(callPattern){
+			case 4:{
+				callText += 'NT'
+				break;
+			}
+			case 3:{
+				callText += '♠'
+				break;
+			}
+			case 2:{
+				callText += '♥'
+				color = '#ff0000'
+				break;
+			}
+			case 1:{
+				callText += '♦'
+				color = '#ff0000'
+				break;
+			}
+			case 0:{
+				callText += '♣'
+				break;
+			}
+			default:
+				return false
+		}
+		return {'str': callText, 'color': color}
+	}
+
+	function layCard(card){
+		if(!layingCard) return
+		//if(roomInfo.currentMovingPlayer != playerInfo.playerSitIndex) return
+		if(playerInfo.card.indexOf(card) == -1) return
+		let pointNum = card%13
+		let patternNum = ~~(card/13)
+		let testCard = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+		if(roomInfo.currentRoundPattern != -1){//if not first to lay card
+			if(patternNum != roomInfo.currentRoundPattern){//if player still have this pattern but the card pattern mismatch
+				for(let num in testCard){
+					let tmp = ~~(13*~~(roomInfo.currentRoundPattern) + ~~num)
+					//console.log(tmp +' at '+playerInfo.card.indexOf(tmp))
+					if(playerInfo.card.indexOf(tmp) != -1) return//find any card of room pattern
+				}
 			}
 		}
-		up = val;
+		//console.log("laid: "+cardPatternsPic[patternNum]+cardPointsText[pointNum])
+		socket.emit("layCard",card)
+		layingCard = false
+		//socket.emit("getPlayerInfo")
+	}
+		
+	
+	canvas.addEventListener('click', (e) => {
+		if(currentState != playerState.playing) return
+		const x = 80
+		const y = 480
+		let pos = getMousePos(canvas, e)
+		let w = 35
+		let h = 120
+		let card = -1
+		let pivot = 0
+		let len = playerInfo.card.length
+		for(let i = 0; i < len; i ++){
+			if(playerInfo.card[i] != -1) pivot = i
+		}
+		let tmpx = x
+		for(let i = 0; i < len; i ++){
+			//if(playerInfo.card[i] != -1){
+				if(i == pivot) w = 80
+				if((pos.x >= tmpx && pos.x < tmpx + w) && (pos.y >= y && pos.y < y+h))
+				card = playerInfo.card[i]
+				tmpx += 35
+			//}
+		}
+		layCard(card)
 	});
+	
+	canvas.addEventListener('mousemove', (e) => {
+		let pos = getMousePos(canvas, e);
+		const x = 80
+		const y = 480
+		let w = 35
+		let h = 120
+		let val = -1
+		let pivot = 0
+		if(playerInfo == -1) return
+		for(let i = 0; i < 13; i ++){
+			if(playerInfo.card[i] != -1) pivot = i
+		}
+		let tmpx = x
+		for(let i = 0; i < 13; i ++){
+			if(playerInfo.card[i] != -1){
+				if(i == pivot) w = 80
+				if((pos.x >= tmpx && pos.x < tmpx + w) && (pos.y >= y && pos.y < y+h)){
+					val = i
+				}
+				tmpx += 35
+			}
+		}
+		cardMouseUp = val
+	})
+	
+	function drawGameInfo(){
+		if(!roomInfo) return
+		switch(currentState){
+			case playerState.calling_bid:{
+				if(currentCall.bid != -1){
+					ctx.font = "72px Arial"
+					let pr = callNumToText(currentCall.bid)
+					ctx.fillStyle = pr.color
+					ctx.fillText(pr.str, 230, 300)
+				}
+				break
+			}
+			case playerState.playing:{
+				ctx.font = "40px Arial"
+				let pr = callNumToText(currentCall.bid)
+				ctx.fillStyle = "#0000ff"
+				ctx.fillText(pr.str, 10, 50)
+				ctx.font = "16px Arial"
+				
+				if(playerSitIndex % 2){
+					ctx.fillStyle = "#0000ff"
+					ctx.fillText('Your team: '+roomInfo.teamScore[playerSitIndex % 2]+'/'+roomInfo.teamGoal[playerSitIndex % 2], 450, 20)
+					ctx.fillStyle = "#ff0000"
+					ctx.fillText('Enemy team: '+roomInfo.teamScore[(playerSitIndex + 1) % 2]+'/'+roomInfo.teamGoal[(playerSitIndex + 1) % 2], 450, 38)
+				}
+				else {
+					ctx.fillStyle = "#0000ff"
+					ctx.fillText('Your team: '+roomInfo.teamScore[playerSitIndex % 2]+'/'+roomInfo.teamGoal[playerSitIndex % 2], 450, 20)
+					ctx.fillStyle = "#ff0000"
+					ctx.fillText('Enemy team: '+roomInfo.teamScore[(playerSitIndex + 1) % 2]+'/'+roomInfo.teamGoal[(playerSitIndex + 1) % 2], 450, 38)
+				}
+				break
+			}
+			case playerState.end:{
+				break
+			}
+			default:
+				return
+				break
+		}
+	}
+	
+	function drawCurrentMovingPlayer(){
+		if(!roomInfo) return
+		//roomInfo.currentMovingPlayer
+		ctx.beginPath()
+		switch((roomInfo.currentMovingPlayer+4-playerSitIndex)%4){
+			case 0:{//300, 400
+				ctx.moveTo(300, 420)
+				ctx.lineTo(280, 410)
+				ctx.lineTo(300, 460)
+				ctx.lineTo(320, 410)
+				break
+			}
+			case 1:{//240, 300
+				ctx.moveTo(220, 300)
+				ctx.lineTo(230, 280)
+				ctx.lineTo(180, 300)
+				ctx.lineTo(230, 320)
+				break
+			}
+			case 2:{//300, 200
+				ctx.moveTo(300, 180)
+				ctx.lineTo(280, 190)
+				ctx.lineTo(300, 140)
+				ctx.lineTo(320, 190)
+				break
+			}
+			case 3:{//360, 300
+				ctx.moveTo(380, 300)
+				ctx.lineTo(370, 280)
+				ctx.lineTo(420, 300)
+				ctx.lineTo(370, 320)
+				break
+			}
+			default:
+				break
+		}
+		ctx.fillStyle = "#ff0000"
+		ctx.fill()
+		ctx.closePath()
+	}
+	
+	function drawCardInHand(){
+		const h = 120
+		const w = 35
+		let x = 80
+		let y = 480
+		let len = playerInfo.card.length
+		for (let key = 0; key < len; key ++){
+			let i = playerInfo.card[key]
+			if(i != -1){
+				if(key == cardMouseUp){
+					ctx.drawPokerCard(x, y-30, h, cardPatterns[~~(i / 13)], cardPoints[i % 13])
+				} else {
+					ctx.drawPokerCard(x, y, h, cardPatterns[~~(i / 13)], cardPoints[i % 13])
+				}
+				x += w
+			}
+		}
+	}
+	
+	function drawCardOnTable(){
+		if(currentState != playerState.playing) return
+		const cardHeight = 120
+		const cardWidth = 80
+		let h = 120
+		let x = 0
+		let y = 0
+		let i = roomInfo.cardOnTable[(playerSitIndex + 1) % 4]
+		
+		if(i != -1) ctx.drawPokerCard(200, 240, cardHeight, cardPatterns[~~(i / 13)], cardPoints[i % 13])
+		i = roomInfo.cardOnTable[(playerSitIndex + 2) % 4]
+		if(i != -1) ctx.drawPokerCard(260, 140, cardHeight, cardPatterns[~~(i/ 13)], cardPoints[i % 13])
+		i = roomInfo.cardOnTable[(playerSitIndex + 3) % 4]
+		if(i != -1) ctx.drawPokerCard(320, 240, cardHeight, cardPatterns[~~(i / 13)], cardPoints[i % 13])
+		i = roomInfo.cardOnTable[(playerSitIndex + 4) % 4]
+		if(i != -1) ctx.drawPokerCard(260, 340, cardHeight, cardPatterns[~~(i / 13)], cardPoints[i % 13])
+	}
+	
+	function drawPlayerName(){
+		if(roomInfo == -1) return
+		ctx.font = "36px Arial"
+		ctx.fillStyle = "#000000"
+		ctx.fillText(roomInfo.playerNames[playerSitIndex], 10, 450);
+		ctx.fillText(roomInfo.playerNames[(playerSitIndex + 1) % 4], 10, 170);
+		ctx.fillText(roomInfo.playerNames[(playerSitIndex + 2) % 4], 150, 50);
+		ctx.fillText(roomInfo.playerNames[(playerSitIndex + 3) % 4], 420, 170);//450
+	}
+	
+	function drawGameResult(){
+		if(roomInfo.teamScore[playerSitIndex % 2] == roomInfo.teamGoal[playerSitIndex % 2]){
+			ctx.fillStyle = "#0000ff";
+			ctx.font = "40px Arial";
+			ctx.fillText("Your team Win :)", 165, 130);
+		} else{
+			ctx.fillStyle = "#ff0000";
+			ctx.font = "40px Arial";
+			ctx.fillText("Your team Lose :(", 145, 130);
+		}
+		if(restartCount > -1){
+			let tmp = ~~((--restartCount)/FPS)
+			/*ctx.fillStyle = "#000000";
+			ctx.font = "40px Arial";
+			ctx.fillText("You will leave the room ", 75, 260);
+			ctx.fillText("in "+tmp+" sec.", 150, 310);*/
+			if(!(restartCount % FPS))
+				$('#gameMessage').text('You will leave in '+tmp+' sec.')
+		}
+	}
+	
+	setInterval( () => {
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		switch(currentState){
+			case playerState.in_lobby:{
+				break
+			}
+			case playerState.waiting_to_start:{
+				break
+			}
+			case playerState.calling_bid:{
+				drawPlayerName()
+				drawCardInHand()
+				drawGameInfo()
+				drawCurrentMovingPlayer()
+				break
+			}
+			case playerState.playing:{
+				drawPlayerName()
+				drawCardInHand()
+				drawCardOnTable()
+				drawGameInfo()
+				drawCurrentMovingPlayer()
+				break
+			}
+			case playerState.end:{
+				drawPlayerName()
+				drawGameInfo()
+				drawGameResult()
+				break
+			}
+			default:
+				return
+				break
+		}
+	},1000/FPS)
+	
 	</script>
 
 </body>
