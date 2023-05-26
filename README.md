@@ -19,7 +19,3 @@ Due to the bot issue, the interface is still simple.
 I'm trying to improved the code.  
   
 I have two roomate when I was a college student. Sometimes, when we want to play bridge, we need to find another person. So I made this bridge game with bots that can be the 4th person and play with us.   
-   
-# download
-with module:  
-https://drive.google.com/drive/folders/1TOdWGkGAGCK-pTNYNpX0eAAfvUIdQnnS
